@@ -1,9 +1,12 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"io"
 	"net/http"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type Response struct {
@@ -26,6 +29,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/cotacao", handlerQuote)
 	http.ListenAndServe(":3232", mux)
+	db, err := sql.Open("sqlite3")
 }
 
 func getQuote() (*Response, error) {
@@ -69,5 +73,5 @@ func handlerQuote(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(res.USDBRL)
+	json.NewEncoder(w).Encode(res)
 }
