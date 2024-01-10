@@ -1,44 +1,26 @@
 package main
 
 import (
-	"context"
+	"fmt"
+	"io"
+	"log"
 	"net/http"
-	"time"
 )
 
-type Response struct {
-	USDBRL struct {
-		Code       string `json:"code"`
-		Codein     string `json:"codein"`
-		Name       string `json:"name"`
-		High       string `json:"high"`
-		Low        string `json:"low"`
-		VarBid     string `json:"varBid"`
-		PctChange  string `json:"pctChange"`
-		Bid        string `json:"bid"`
-		Ask        string `json:"ask"`
-		Timestamp  string `json:"timestamp"`
-		CreateDate string `json:"create_date"`
-	}
-}
-
 func main() {
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, "GET", "http://localhost:3232/cotacao", nil)
+	client := &http.Client{}
+	resp, err := client.Get("http://localhost:3232/cotacao")
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	defer resp.Body.Close()
 
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
-	defer res.Body.Close()
-
+	fmt.Println(string(body))
 }
