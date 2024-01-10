@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -52,13 +51,13 @@ func main() {
 		log.Fatal("error trying to create table", err)
 	}
 
-	mux.HandleFunc("/", handleHelloWorld)
+	mux.HandleFunc("/", handleWelcome)
 	mux.HandleFunc("/cotacao", handleQuote)
 	http.ListenAndServe(":3232", mux)
 }
 
 func handleQuote(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	res, err := getExchangeRate(ctx)
@@ -70,16 +69,18 @@ func handleQuote(w http.ResponseWriter, r *http.Request) {
 
 	ctxDB, cancelDB := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancelDB()
+	insertQuote(ctxDB, res)
 
-	_, err = DB.ExecContext(ctxDB, `INSERT INTO cotacoes(bid, timestamp) VALUES (?, ?);`, res.USDBRL.Bid, time.Now().Unix())
+	response := map[string]string{"valor": res.USDBRL.Bid}
+	json.NewEncoder(w).Encode(response)
+}
 
+func insertQuote(ctx context.Context, quotation *QuotationResponse) {
+	_, err := DB.ExecContext(ctx, `INSERT INTO cotacoes(bid, timestamp) VALUES (?, ?);`, quotation.USDBRL.Bid, time.Now().Unix())
 	if err != nil {
 		log.Fatal("Error inserting into cotacoes context:", err)
 		return
 	}
-
-	response := map[string]string{"bid": res.USDBRL.Bid}
-	json.NewEncoder(w).Encode(response)
 }
 
 func getExchangeRate(ctx context.Context) (*QuotationResponse, error) {
@@ -113,10 +114,9 @@ func getExchangeRate(ctx context.Context) (*QuotationResponse, error) {
 		return nil, err
 	}
 
-	fmt.Println(quotation)
 	return &quotation, nil
 }
 
-func handleHelloWorld(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello World!"))
+func handleWelcome(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Olá, para ver a cotação do dólar real acesse '/cotacao'"))
 }
